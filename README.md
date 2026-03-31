@@ -151,12 +151,23 @@ Lift vs overall churn baseline (73.9%):
 - `ecommerce_churn_analysis.ipynb`: Full analysis pipeline.
 - `eda_and_customer_split.ipynb`: EDA + one-time/repeat customer split and CSV export.
 - `repeat_customers_modeling.ipynb`: Repeat-only model training, diagnostics, and segmentation.
+- `dashboard.html`: Interactive HTML dashboard for churn KPIs, segment visuals, and high-risk action list.
 - `ecommerce_churn_processed_data.csv`: Processed model-ready output.
 - `output/ecommerce_churn_processed_data.csv`: Additional exported output copy.
 - `output/one_time_customers.csv`: One-time customer dataset.
 - `output/repeat_customers.csv`: Repeat customer dataset for modeling.
 - `output/repeat_customer_segments.csv`: Repeat customers with risk segment labels.
 - `churn dashboard.pbix`: Power BI dashboard file.
+
+## Run HTML dashboard
+1. From project root, start a local server:
+  - `python -m http.server 8000`
+2. Open:
+  - `http://localhost:8000/dashboard.html`
+3. The dashboard auto-loads the first available source in this order:
+  - `output/repeat_customer_segments.csv`
+  - `output/ecommerce_churn_processed_data.csv`
+  - `ecommerce_churn_processed_data.csv`
 
 ## Final summary
 This project successfully built an actionable churn analytics pipeline from raw e-commerce records to model-based risk segmentation and BI output. The main insight is that improving segmentation logic alone is not enough when churn labels are highly imbalanced. The strongest improvement opportunity is now upstream: refine churn target policy so risk labels become more meaningful in absolute business terms.

@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Customer Churn Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4efe4;
+      --panel: #fffdf8;
+      --ink: #1d2a35;
+      --muted: #5a6772;
+      --line: #d9cfbe;
+      --low: #2e86ab;
+      --med: #f29f05;
+      --high: #d7263d;
+      --accent: #0f7173;
+      --shadow: 0 10px 24px rgba(30, 45, 60, 0.12);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 10%, rgba(15, 113, 115, 0.12), transparent 36%),
+        radial-gradient(circle at 82% 18%, rgba(242, 159, 5, 0.14), transparent 34%),
+        linear-gradient(180deg, #f7f2e8 0%, #efe5d6 100%);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 26px 18px 42px;
+      position: relative;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .eyebrow {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.5vw, 2.2rem);
+      line-height: 1.1;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fff;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .grid-cards {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      min-height: 98px;
+    }
+
+    .card .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .card .val {
+      font-size: clamp(1.2rem, 2vw, 1.9rem);
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .card .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .grid-charts {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      min-height: 340px;
+    }
+
+    .panel h2 {
+      margin: 4px 6px 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .plot {
+      width: 100%;
+      height: 285px;
+    }
+
+    .plot.tall {
+      height: 330px;
+    }
+
+    .table-wrap {
+      margin-top: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .table-head h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    select {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 6px 8px;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      text-align: left;
+      background: #f8f2e7;
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody td {
+      border-bottom: 1px solid #eee2d1;
+      padding: 9px 10px;
+    }
+
+    tbody tr:hover {
+      background: #fbf7ef;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .pill.low { background: var(--low); }
+    .pill.medium { background: var(--med); }
+    .pill.high { background: var(--high); }
+
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .error {
+      color: #8f1025;
+      background: #ffe7ec;
+      border: 1px solid #f4bac7;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-charts { grid-template-columns: 1fr; }
+      .plot, .plot.tall { height: 300px; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 14px 10px 24px; }
+      .grid-cards { grid-template-columns: 1fr; }
+      .card { min-height: 84px; }
+      .table-head { padding: 10px; }
+      table { font-size: 12px; }
+      thead th, tbody td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Customer Retention Intelligence</div>
+      <h1>Repeat Customer Churn Dashboard</h1>
+      <p class="sub">Interactive dashboard built from exported notebook outputs. Designed for retention operations, segment validation, and campaign targeting.</p>
+      <div class="meta">
+        <span class="chip" id="data-source-chip">Source: loading...</span>
+        <span class="chip" id="row-count-chip">Rows: --</span>
+        <span class="chip">Segments: Low / Medium / High</span>
+      </div>
+    </section>
+
+    <section class="grid-cards">
+      <article class="card">
+        <div class="label">Total Customers</div>
+        <div class="val" id="kpi-total">--</div>
+        <div class="hint">Repeat customer population</div>
+      </article>
+      <article class="card">
+        <div class="label">Actual Churn Rate</div>
+        <div class="val" id="kpi-churn">--</div>
+        <div class="hint">Based on current churn label</div>
+      </article>
+      <article class="card">
+        <div class="label">Avg Predicted Churn</div>
+        <div class="val" id="kpi-prob">--</div>
+        <div class="hint">Model propensity baseline</div>
+      </article>
+      <article class="card">
+        <div class="label">High Risk Customers</div>
+        <div class="val" id="kpi-high">--</div>
+        <div class="hint" id="kpi-high-share">--</div>
+      </article>
+    </section>
+
+    <section class="grid-charts">
+      <article class="panel">
+        <h2>Segment Distribution</h2>
+        <div id="segmentCountChart" class="plot"></div>
+      </article>
+      <article class="panel">
+        <h2>Actual Churn Rate by Segment</h2>
+        <div id="segmentChurnChart" class="plot"></div>
+      </article>
+      <article class="panel">
+        <h2>Probability Spread by Segment</h2>
+        <div id="probBoxChart" class="plot"></div>
+      </article>
+      <article class="panel">
+        <h2>Review vs Churn Probability</h2>
+        <div id="reviewScatterChart" class="plot"></div>
+      </article>
+    </section>
+
+    <section class="table-wrap">
+      <div class="table-head">
+        <h3>High-Risk Customer Action List</h3>
+        <div class="controls">
+          <label for="topN">Top N:</label>
+          <select id="topN">
+            <option value="100">100</option>
+            <option value="200" selected>200</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+          </select>
+        </div>
+      </div>
+      <div style="max-height: 420px; overflow: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer ID</th>
+              <th>Risk Segment</th>
+              <th>Churn Probability</th>
+              <th>Total Orders</th>
+              <th>Total Spent</th>
+              <th>Avg Review</th>
+              <th>Recency Days</th>
+            </tr>
+          </thead>
+          <tbody id="riskTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="status" class="status">Loading data...</div>
+    <div id="errorBox" class="error" style="display:none;"></div>
+  </div>
+
+  <script>
+    const RISK_ORDER = ["Low Risk", "Medium Risk", "High Risk"];
+    const RISK_COLOR = {
+      "Low Risk": "#2e86ab",
+      "Medium Risk": "#f29f05",
+      "High Risk": "#d7263d"
+    };
+
+    const sourceCandidates = [
+      "output/repeat_customer_segments.csv",
+      "output/ecommerce_churn_processed_data.csv",
+      "ecommerce_churn_processed_data.csv"
+    ];
+
+    const el = (id) => document.getElementById(id);
+
+    function fmtInt(n) {
+      return Number(n || 0).toLocaleString();
+    }
+
+    function fmtPct(x, digits = 1) {
+      if (x == null || Number.isNaN(x)) return "--";
+      return `${(Number(x) * 100).toFixed(digits)}%`;
+    }
+
+    function fmtNum(x, digits = 1) {
+      if (x == null || Number.isNaN(x)) return "--";
+      return Number(x).toFixed(digits);
+    }
+
+    async function loadCsvFromPath(path) {
+      const res = await fetch(path);
+      if (!res.ok) {
+        throw new Error(`Could not load ${path} (${res.status})`);
+      }
+      const text = await res.text();
+      const parsed = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true });
+      return parsed.data;
+    }
+
+    async function loadFirstAvailable() {
+      for (const p of sourceCandidates) {
+        try {
+          const rows = await loadCsvFromPath(p);
+          if (rows && rows.length) {
+            return { rows, source: p };
+          }
+        } catch (_) {
+          // Try next source.
+        }
+      }
+      throw new Error(
+        "No CSV source found. Expected one of: output/repeat_customer_segments.csv, output/ecommerce_churn_processed_data.csv, ecommerce_churn_processed_data.csv"
+      );
+    }
+
+    function normalizeRows(rows) {
+      return rows.map((r) => ({
+        customer_unique_id: String(r.customer_unique_id ?? ""),
+        risk_segment: String(r.risk_segment ?? "Unknown"),
+        churned: Number(r.churned ?? 0),
+        churn_probability: Number(r.churn_probability ?? 0),
+        total_orders: Number(r.total_orders ?? 0),
+        total_spent: Number(r.total_spent ?? 0),
+        avg_review: Number(r.avg_review ?? 0),
+        recency_days: Number(r.recency_days ?? 0)
+      }));
+    }
+
+    function groupBySegment(rows) {
+      const map = new Map();
+      for (const seg of RISK_ORDER) {
+        map.set(seg, { segment: seg, customers: 0, churned: 0, probSum: 0, rows: [] });
+      }
+
+      for (const r of rows) {
+        const seg = map.has(r.risk_segment) ? r.risk_segment : "Low Risk";
+        const slot = map.get(seg);
+        slot.customers += 1;
+        slot.churned += r.churned;
+        slot.probSum += r.churn_probability;
+        slot.rows.push(r);
+      }
+
+      return RISK_ORDER.map((seg) => {
+        const s = map.get(seg);
+        return {
+          segment: seg,
+          customers: s.customers,
+          churnRate: s.customers ? s.churned / s.customers : 0,
+          avgProb: s.customers ? s.probSum / s.customers : 0,
+          rows: s.rows
+        };
+      });
+    }
+
+    function drawKpis(rows, grouped) {
+      const total = rows.length;
+      const churnRate = total ? rows.reduce((a, r) => a + r.churned, 0) / total : 0;
+      const avgProb = total ? rows.reduce((a, r) => a + r.churn_probability, 0) / total : 0;
+      const high = grouped.find((g) => g.segment === "High Risk")?.customers || 0;
+
+      el("kpi-total").textContent = fmtInt(total);
+      el("kpi-churn").textContent = fmtPct(churnRate);
+      el("kpi-prob").textContent = fmtPct(avgProb);
+      el("kpi-high").textContent = fmtInt(high);
+      el("kpi-high-share").textContent = `${fmtPct(total ? high / total : 0)} of customers`;
+      el("row-count-chip").textContent = `Rows: ${fmtInt(total)}`;
+    }
+
+    function baseLayout() {
+      return {
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)",
+        margin: { l: 44, r: 18, t: 8, b: 42 },
+        font: { family: "Space Grotesk, sans-serif", color: "#1d2a35" },
+        xaxis: { gridcolor: "#eadfcd", zerolinecolor: "#eadfcd" },
+        yaxis: { gridcolor: "#eadfcd", zerolinecolor: "#eadfcd" }
+      };
+    }
+
+    function drawSegmentCount(grouped) {
+      const x = grouped.map((g) => g.segment);
+      const y = grouped.map((g) => g.customers);
+      const colors = x.map((s) => RISK_COLOR[s]);
+
+      const trace = {
+        type: "bar",
+        x,
+        y,
+        marker: { color: colors, line: { color: "#fff", width: 1 } },
+        text: y.map((v) => fmtInt(v)),
+        textposition: "outside"
+      };
+
+      const layout = {
+        ...baseLayout(),
+        yaxis: { title: "Customers", gridcolor: "#eadfcd" }
+      };
+
+      Plotly.newPlot("segmentCountChart", [trace], layout, { responsive: true, displayModeBar: false });
+    }
+
+    function drawSegmentChurn(grouped, overallChurn) {
+      const x = grouped.map((g) => g.segment);
+      const y = grouped.map((g) => g.churnRate * 100);
+      const colors = x.map((s) => RISK_COLOR[s]);
+
+      const bars = {
+        type: "bar",
+        x,
+        y,
+        marker: { color: colors, line: { color: "#fff", width: 1 } },
+        text: y.map((v) => `${v.toFixed(1)}%`),
+        textposition: "outside"
+      };
+
+      const line = {
+        type: "scatter",
+        mode: "lines",
+        x,
+        y: x.map(() => overallChurn * 100),
+        line: { color: "#1d2a35", width: 1.5, dash: "dash" },
+        name: `Overall ${ (overallChurn * 100).toFixed(1)}%`
+      };
+
+      const layout = {
+        ...baseLayout(),
+        yaxis: { title: "Churn Rate", ticksuffix: "%", gridcolor: "#eadfcd" },
+        showlegend: true,
+        legend: { orientation: "h", y: 1.15 }
+      };
+
+      Plotly.newPlot("segmentChurnChart", [bars, line], layout, { responsive: true, displayModeBar: false });
+    }
+
+    function drawProbBox(grouped) {
+      const traces = grouped.map((g) => ({
+        type: "box",
+        y: g.rows.map((r) => r.churn_probability * 100),
+        name: g.segment,
+        marker: { color: RISK_COLOR[g.segment] },
+        boxpoints: "outliers"
+      }));
+
+      const layout = {
+        ...baseLayout(),
+        yaxis: { title: "Predicted Churn Probability", ticksuffix: "%", gridcolor: "#eadfcd" }
+      };
+
+      Plotly.newPlot("probBoxChart", traces, layout, { responsive: true, displayModeBar: false });
+    }
+
+    function drawScatter(rows) {
+      const bySegment = RISK_ORDER.map((seg) => rows.filter((r) => r.risk_segment === seg));
+      const traces = bySegment.map((chunk, i) => ({
+        type: "scattergl",
+        mode: "markers",
+        name: RISK_ORDER[i],
+        x: chunk.map((r) => r.avg_review),
+        y: chunk.map((r) => r.churn_probability * 100),
+        text: chunk.map((r) => `ID: ${r.customer_unique_id}<br>Total Spent: ${fmtNum(r.total_spent, 2)}`),
+        hovertemplate: "%{text}<br>Avg Review: %{x:.2f}<br>Pred Prob: %{y:.1f}%<extra></extra>",
+        marker: {
+          color: RISK_COLOR[RISK_ORDER[i]],
+          size: chunk.map((r) => Math.max(5, Math.min(20, Math.sqrt(Math.max(r.total_spent, 1)) / 2.2))),
+          opacity: 0.65,
+          line: { width: 0.2, color: "#fff" }
+        }
+      }));
+
+      const layout = {
+        ...baseLayout(),
+        xaxis: { title: "Average Review", gridcolor: "#eadfcd" },
+        yaxis: { title: "Predicted Churn Probability", ticksuffix: "%", gridcolor: "#eadfcd" },
+        legend: { orientation: "h", y: 1.12 }
+      };
+
+      Plotly.newPlot("reviewScatterChart", traces, layout, { responsive: true, displayModeBar: false });
+    }
+
+    function pillClass(seg) {
+      if (seg === "High Risk") return "high";
+      if (seg === "Medium Risk") return "medium";
+      return "low";
+    }
+
+    function renderTable(rows, topN = 200) {
+      const body = el("riskTableBody");
+      body.innerHTML = "";
+
+      const highRows = rows
+        .filter((r) => r.risk_segment === "High Risk")
+        .sort((a, b) => b.churn_probability - a.churn_probability)
+        .slice(0, topN);
+
+      for (const r of highRows) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.customer_unique_id}</td>
+          <td><span class="pill ${pillClass(r.risk_segment)}">${r.risk_segment}</span></td>
+          <td>${fmtPct(r.churn_probability)}</td>
+          <td>${fmtInt(r.total_orders)}</td>
+          <td>${fmtNum(r.total_spent, 2)}</td>
+          <td>${fmtNum(r.avg_review, 2)}</td>
+          <td>${fmtInt(r.recency_days)}</td>
+        `;
+        body.appendChild(tr);
+      }
+    }
+
+    async function init() {
+      try {
+        const { rows, source } = await loadFirstAvailable();
+        const clean = normalizeRows(rows).filter((r) => r.customer_unique_id);
+
+        if (!clean.length) {
+          throw new Error("CSV loaded but no usable rows were found.");
+        }
+
+        el("data-source-chip").textContent = `Source: ${source}`;
+
+        const grouped = groupBySegment(clean);
+        const overallChurn = clean.reduce((a, r) => a + r.churned, 0) / clean.length;
+
+        drawKpis(clean, grouped);
+        drawSegmentCount(grouped);
+        drawSegmentChurn(grouped, overallChurn);
+        drawProbBox(grouped);
+        drawScatter(clean);
+        renderTable(clean, Number(el("topN").value));
+
+        el("topN").addEventListener("change", () => renderTable(clean, Number(el("topN").value)));
+        el("status").textContent = "Dashboard ready.";
+      } catch (err) {
+        el("status").textContent = "Failed to load dashboard data.";
+        el("errorBox").style.display = "block";
+        el("errorBox").textContent = `${err.message}. If you opened this file directly, run a local server from project root and open http://localhost:8000/dashboard.html`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
