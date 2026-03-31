@@ -74,7 +74,6 @@ Main files used from `data/`:
 - ROC-AUC: `0.518`
 
 ## Visual outputs
-### HTML dashboard
 ![HTML Dashboard](images/html_dashboard.png)
 
 ### Notebook visual placeholders
@@ -82,6 +81,10 @@ Main files used from `data/`:
 ![](images/repeat_probability_spread.png)
 ![](images/churn_rate_by_segment.png)
 
+## Visual outputs
+![](images/churn_dashboard_page-0001.jpg)
+![](images/churn_dashboard_page-0002.jpg)
+![](images/churn_dashboard_page-0003.jpg)
 
 ## Deliverables
 - `eda_and_customer_split.ipynb`: EDA + one-time/repeat split + CSV export.
