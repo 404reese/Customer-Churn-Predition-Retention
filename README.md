@@ -18,6 +18,28 @@ The goal is not only to report churn, but to identify which customers are at rel
 - Produce a clean output file for dashboarding in Power BI.
 - Validate whether segments are meaningful against actual churn behavior.
 
+## Recent changes made now (March 31, 2026)
+- Split the original single notebook flow into two focused notebooks:
+  - `eda_and_customer_split.ipynb` for EDA and customer-type extraction.
+  - `repeat_customers_modeling.ipynb` for repeat-customer-only modeling and segmentation.
+- Added separate customer logic:
+  - One-Time customers are handled as a dedicated group for export and nurture strategy.
+  - Repeat customers are used for model training and risk segmentation.
+- Implemented revised churn horizon logic in the split workflow:
+  - One-Time buyers: churn if `recency_days > 210`.
+  - Repeat buyers: churn if `recency_days > 180`.
+- Added new exports from the split notebook:
+  - `output/one_time_customers.csv`
+  - `output/repeat_customers.csv`
+- Added repeat-customer segmentation export:
+  - `output/repeat_customer_segments.csv`
+- Expanded visualization coverage in `repeat_customers_modeling.ipynb`:
+  - Repeat class balance and order distribution by churn class.
+  - Feature correlation heatmap.
+  - Predicted-probability distribution by true class.
+  - Decile diagnostics (actual churn vs average predicted probability).
+  - Segment profile visuals (size, churn rate, spend, and probability spread).
+
 ## Dataset used
 Source files are in the `data/` folder:
 - `olist_customers_dataset.csv`
@@ -116,15 +138,24 @@ Lift vs overall churn baseline (73.9%):
 - Track retention campaign outcomes to close the loop and improve label realism.
 
 ## How to run
-1. Open `ecommerce_churn_analysis.ipynb`.
-2. Run all cells from top to bottom.
-3. Confirm final export message.
-4. Load `ecommerce_churn_processed_data.csv` into Power BI.
+1. Run `eda_and_customer_split.ipynb` from top to bottom.
+2. Confirm these exports are created in `output/`:
+  - `one_time_customers.csv`
+  - `repeat_customers.csv`
+3. Run `repeat_customers_modeling.ipynb` from top to bottom.
+4. Confirm segmented export is created:
+  - `repeat_customer_segments.csv`
+5. (Optional) Run `ecommerce_churn_analysis.ipynb` if you want the legacy all-in-one pipeline.
 
 ## Files in this repository
 - `ecommerce_churn_analysis.ipynb`: Full analysis pipeline.
+- `eda_and_customer_split.ipynb`: EDA + one-time/repeat customer split and CSV export.
+- `repeat_customers_modeling.ipynb`: Repeat-only model training, diagnostics, and segmentation.
 - `ecommerce_churn_processed_data.csv`: Processed model-ready output.
 - `output/ecommerce_churn_processed_data.csv`: Additional exported output copy.
+- `output/one_time_customers.csv`: One-time customer dataset.
+- `output/repeat_customers.csv`: Repeat customer dataset for modeling.
+- `output/repeat_customer_segments.csv`: Repeat customers with risk segment labels.
 - `churn dashboard.pbix`: Power BI dashboard file.
 
 ## Final summary
