@@ -81,7 +81,7 @@ Main files used from `data/`:
 ![](images/repeat_probability_spread.png)
 ![](images/churn_rate_by_segment.png)
 
-## Visual outputs
+## PowerBI Dashboards
 ![](images/churn_dashboard_page-0001.jpg)
 ![](images/churn_dashboard_page-0002.jpg)
 ![](images/churn_dashboard_page-0003.jpg)
