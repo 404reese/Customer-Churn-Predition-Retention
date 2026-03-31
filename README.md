@@ -1,173 +1,106 @@
 # Customer Churn Prediction and Retention Analysis
 
-## What this project is
-This project builds an end-to-end churn analytics workflow for an e-commerce dataset (Olist).
-It combines:
-- customer behavior feature engineering,
-- churn labeling,
-- machine learning prediction,
-- customer risk segmentation,
-- and export for Power BI reporting.
+## Project summary
+This project analyzes e-commerce customer behavior and builds a churn-risk workflow for retention targeting.  
+The final solution separates one-time and repeat customers, trains a churn model for repeat customers, and produces segment-level outputs for dashboarding.
 
-The goal is not only to report churn, but to identify which customers are at relatively higher risk and why, so retention teams can act earlier.
+## Problem statement
+Traditional dashboards show churn only as a historical KPI. This project extends that by:
+- scoring churn propensity at customer level,
+- creating risk segments,
+- and generating action-oriented outputs for retention.
 
-## Project goals
-- Build a customer-level churn dataset from raw transactional tables.
-- Train a model that estimates churn probability for each customer.
-- Segment customers into risk groups for retention targeting.
-- Produce a clean output file for dashboarding in Power BI.
-- Validate whether segments are meaningful against actual churn behavior.
+## Dataset
+Source: Olist e-commerce dataset
 
-## Recent changes made now (March 31, 2026)
-- Split the original single notebook flow into two focused notebooks:
-  - `eda_and_customer_split.ipynb` for EDA and customer-type extraction.
-  - `repeat_customers_modeling.ipynb` for repeat-customer-only modeling and segmentation.
-- Added separate customer logic:
-  - One-Time customers are handled as a dedicated group for export and nurture strategy.
-  - Repeat customers are used for model training and risk segmentation.
-- Implemented revised churn horizon logic in the split workflow:
-  - One-Time buyers: churn if `recency_days > 210`.
-  - Repeat buyers: churn if `recency_days > 180`.
-- Added new exports from the split notebook:
-  - `output/one_time_customers.csv`
-  - `output/repeat_customers.csv`
-- Added repeat-customer segmentation export:
-  - `output/repeat_customer_segments.csv`
-- Expanded visualization coverage in `repeat_customers_modeling.ipynb`:
-  - Repeat class balance and order distribution by churn class.
-  - Feature correlation heatmap.
-  - Predicted-probability distribution by true class.
-  - Decile diagnostics (actual churn vs average predicted probability).
-  - Segment profile visuals (size, churn rate, spend, and probability spread).
-
-## Dataset used
-Source files are in the `data/` folder:
+Main files used from `data/`:
 - `olist_customers_dataset.csv`
 - `olist_orders_dataset.csv`
 - `olist_order_payments_dataset.csv`
 - `olist_order_reviews_dataset.csv`
 
-## Methods and workflow
-1. Data preparation and cleaning
+## Workflow and process
+### 1. Data preparation
 - Joined customers, orders, payments, and reviews.
-- Filtered to delivered orders.
-- Parsed timestamps and removed rows with missing critical fields.
+- Kept delivered orders only.
+- Cleaned missing values and parsed datetime columns.
 
-2. Feature engineering (customer level)
+### 2. Customer-level feature engineering
 - Built one row per customer with behavior features:
-  - `total_orders`, `total_spent`, `avg_review`, `min_review`, `pct_low_review`, `avg_payment`, `payment_types`
-- Created `recency_days` from the customer last purchase date.
+  - `recency_days`, `total_orders`, `total_spent`, `avg_review`, `min_review`, `pct_low_review`, `avg_payment`, `payment_types`.
 
-3. Churn label creation
-- Churn label: customer inactive for more than `CHURN_THRESHOLD` days.
-- Data-driven threshold chosen from repeat-buyer inter-purchase gap percentile.
-- Current threshold observed in notebook run: 118 days.
+### 3. Customer type split
+- Added buyer-type classification:
+  - `One-Time` (1 order)
+  - `Repeat` (>1 orders)
+- Applied separate churn horizon logic:
+  - One-Time: churn if `recency_days > 210`
+  - Repeat: churn if `recency_days > 180`
 
-4. Modeling
-- Train/test split with stratification.
-- RandomForestClassifier used for churn prediction.
-- Class imbalance handling added using SMOTE on training data.
+### 4. Repeat-customer modeling
+- Trained `RandomForestClassifier` on repeat customers only.
+- Used SMOTE to reduce class imbalance during training.
+- Generated churn probability for each repeat customer.
 
-5. Segmentation
-- Predicted churn probability for all customers.
-- Applied StandardScaler to probability scores.
-- Used KMeans (`n_clusters=3`) on scaled scores.
-- Mapped clusters to ordered labels by centroid rank:
-  - Low Risk, Medium Risk, High Risk.
+### 5. Segmentation
+- Scaled churn probabilities using `StandardScaler`.
+- Applied KMeans (`n_clusters=3`) to create:
+  - Low Risk
+  - Medium Risk
+  - High Risk
 
-6. Export
-- Exported final dataset to:
-  - `ecommerce_churn_processed_data.csv`
+### 6. Outputs and dashboarding
+- Exported repeat and one-time datasets separately.
+- Exported segmented repeat-customer output for BI dashboards.
+- Built both Power BI blueprint and standalone HTML dashboard.
 
-## Key outcomes (latest run)
-- Total customers: 92,746
-- Churned customers: 68,497 (73.9%)
-- Retained customers: 24,249 (26.1%)
+## Final outcomes
+### Customer split (latest run)
+- Total customers: `92,746`
+- One-Time customers: `87,256`
+- Repeat customers: `5,490`
 
-Risk segment distribution:
-- Low Risk: 67,785 customers
-- Medium Risk: 19,869 customers
-- High Risk: 5,092 customers
+### Churn baseline
+- Overall churn (new label logic): `52.3%`
+- Repeat-customer churn baseline: `60.3%`
 
-Actual churn rate by segment:
-- Low Risk: 71.2%
-- Medium Risk: 79.9%
-- High Risk: 86.1%
+### Repeat segment results
+- Low Risk: `1,827` customers, `31.3%` churn
+- Medium Risk: `2,589` customers, `67.6%` churn
+- High Risk: `1,074` customers, `92.4%` churn
 
-Lift vs overall churn baseline (73.9%):
-- Low Risk: 0.96x
-- Medium Risk: 1.08x
-- High Risk: 1.17x
+### Model snapshot (repeat customers)
+- Accuracy: `0.54`
+- ROC-AUC: `0.518`
 
-## What I learned
-- Segmentation quality depends on label quality and class distribution, not only clustering method.
-- KMeans can improve customer distribution across buckets, but does not fix an overly severe churn definition.
-- Standardizing inputs before KMeans is important even in 1D score-based clustering for consistent behavior.
-- Relative risk can be valid even when absolute churn percentages look high.
-- Class imbalance handling (SMOTE) is useful in training, but upstream target definition still dominates final outcomes.
-- Clear diagnostics (overall baseline, segment lift) are necessary to avoid misleading business interpretation.
+## Visual outputs
+### HTML dashboard
+![HTML Dashboard](images/html_dashboard.png)
 
-## Challenges faced
-1. Segment imbalance with threshold-based rules
-- Initial fixed cutoffs pushed almost all customers into one segment.
-- Action taken: replaced fixed bands with KMeans clustering.
+### Notebook visual placeholders
+![](images/classes.png)
+![](images/repeat_probability_spread.png)
+![](images/churn_rate_by_segment.png)
 
-2. High absolute churn in every segment
-- Even Low Risk showed high churn percentage.
-- Root cause: baseline churn rate in labeled data is very high (73.9%).
-- Action taken: added baseline and lift reporting to interpret segments relatively.
 
-3. Class imbalance in model training
-- Majority class was churned customers.
-- Action taken: introduced SMOTE for balanced training samples.
+## Deliverables
+- `eda_and_customer_split.ipynb`: EDA + one-time/repeat split + CSV export.
+- `repeat_customers_modeling.ipynb`: Repeat-only model, diagnostics, and segmentation.
+- `dashboard.html`: Interactive web dashboard.
+- `POWERBI_DASHBOARD_BLUEPRINT.md`: Page plan and DAX measures for Power BI.
 
-4. Interpreting risk labels for business users
-- Label names can be misunderstood as absolute risk in high-baseline datasets.
-- Action taken: documented relative-risk interpretation and segment lift.
-
-## Limitations
-- Churn definition is based on inactivity threshold and may be too strict for business use.
-- Label policy strongly affects all downstream outputs.
-- Model and segmentation are only as good as target definition and historical window design.
-
-## Recommended next improvements
-- Revisit churn definition (for example, evaluate 180/210-day horizons).
-- Consider separate logic for one-time buyers versus repeat buyers.
-- Add calibration checks for predicted probabilities.
-- Compare models (XGBoost/LightGBM, calibrated logistic baseline).
-- Track retention campaign outcomes to close the loop and improve label realism.
+Generated outputs:
+- `output/one_time_customers.csv`
+- `output/repeat_customers.csv`
+- `output/repeat_customer_segments.csv`
 
 ## How to run
-1. Run `eda_and_customer_split.ipynb` from top to bottom.
-2. Confirm these exports are created in `output/`:
-  - `one_time_customers.csv`
-  - `repeat_customers.csv`
-3. Run `repeat_customers_modeling.ipynb` from top to bottom.
-4. Confirm segmented export is created:
-  - `repeat_customer_segments.csv`
-5. (Optional) Run `ecommerce_churn_analysis.ipynb` if you want the legacy all-in-one pipeline.
+1. Run `eda_and_customer_split.ipynb`.
+2. Run `repeat_customers_modeling.ipynb`.
+3. Optional HTML dashboard:
+  - Start local server: `python -m http.server 8000`
+  - Open: `http://localhost:8000/dashboard.html`
 
-## Files in this repository
-- `ecommerce_churn_analysis.ipynb`: Full analysis pipeline.
-- `eda_and_customer_split.ipynb`: EDA + one-time/repeat customer split and CSV export.
-- `repeat_customers_modeling.ipynb`: Repeat-only model training, diagnostics, and segmentation.
-- `dashboard.html`: Interactive HTML dashboard for churn KPIs, segment visuals, and high-risk action list.
-- `ecommerce_churn_processed_data.csv`: Processed model-ready output.
-- `output/ecommerce_churn_processed_data.csv`: Additional exported output copy.
-- `output/one_time_customers.csv`: One-time customer dataset.
-- `output/repeat_customers.csv`: Repeat customer dataset for modeling.
-- `output/repeat_customer_segments.csv`: Repeat customers with risk segment labels.
-- `churn dashboard.pbix`: Power BI dashboard file.
-
-## Run HTML dashboard
-1. From project root, start a local server:
-  - `python -m http.server 8000`
-2. Open:
-  - `http://localhost:8000/dashboard.html`
-3. The dashboard auto-loads the first available source in this order:
-  - `output/repeat_customer_segments.csv`
-  - `output/ecommerce_churn_processed_data.csv`
-  - `ecommerce_churn_processed_data.csv`
-
-## Final summary
-This project successfully built an actionable churn analytics pipeline from raw e-commerce records to model-based risk segmentation and BI output. The main insight is that improving segmentation logic alone is not enough when churn labels are highly imbalanced. The strongest improvement opportunity is now upstream: refine churn target policy so risk labels become more meaningful in absolute business terms.
+## Reflection document
+Personal learnings, challenges, and improvement notes are moved to:
+- `LEARNINGS_AND_CHALLENGES.md`
